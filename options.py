@@ -27,7 +27,7 @@ class Options:
 
 		self.args = self.parser.parse_args()
 
-		if(not "file" in self.args and not "email" in self.args):
+		if "file" not in self.args and "email" not in self.args:
 			self.parser.error("Error! You must specify one of the two options: -f/--file or -e/--email")
 
 

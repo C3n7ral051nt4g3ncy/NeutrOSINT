@@ -46,15 +46,15 @@ class NeutrOSINT():
 		chrome_options.add_argument("--headless")
 		chrome_options.add_argument('--no-sandbox')
 
-		if(self.proxy != None):
-			chrome_options.add_argument('--proxy-server=%s' % self.proxy)
+		if (self.proxy != None):
+			chrome_options.add_argument(f'--proxy-server={self.proxy}')
 
 		service = Service(ChromeDriverManager().install())
 
 		try:
 			self.driver = webdriver.Chrome(service=service, options=chrome_options)
 		except:
-			print(Fore.RED + "[-] Error setting up the driver...")
+			print(f"{Fore.RED}[-] Error setting up the driver...")
 			exit()
 
 		self.driver.get('https://account.protonmail.com/login')
@@ -76,28 +76,26 @@ class NeutrOSINT():
 
 	def load_emails(self, file):
 		try:
-			handle = open(file, 'r')
-			lines = handle.read().splitlines()
-			for line in lines:
-				self.emails.append(line)
+			with open(file, 'r') as handle:
+				lines = handle.read().splitlines()
+				for line in lines:
+					self.emails.append(line)
 
-			handle.close()
 		except:
-			print(Fore.RED + "[-] Unable to load emails")
+			print(f"{Fore.RED}[-] Unable to load emails")
 			exit()
 		
 	def write_to_file(self, data):
 		try:
-			handle = open(self.output_file, "a")
-			handle.write(data)
-			handle.close()
+			with open(self.output_file, "a") as handle:
+				handle.write(data)
 		except:
-			print(Fore.RED + "[-] Unable to save data to file")
+			print(f"{Fore.RED}[-] Unable to save data to file")
 			exit()
 
 	def login(self):
 		try:
-			print(Fore.YELLOW + "[?] Connecting to ProtonMail with credentials...")
+			print(f"{Fore.YELLOW}[?] Connecting to ProtonMail with credentials...")
 
 			#Find the username field
 			element = WebDriverWait(self.driver, self.time).until(EC.presence_of_element_located((By.ID, 'username')))
@@ -106,7 +104,7 @@ class NeutrOSINT():
 
 			#Find the password field
 			element = WebDriverWait(self.driver, self.time).until(EC.presence_of_element_located((By.ID, 'password')))
-			password_element = self.driver.find_element(By.ID,'password') 
+			password_element = self.driver.find_element(By.ID,'password')
 			password_element.send_keys(self.password)
 
 			#Submit the form
@@ -117,7 +115,7 @@ class NeutrOSINT():
 
 			print(Fore.GREEN + "[+] Connected to ProtonMail\n")
 		except:
-			print(Fore.RED + "[-] Error when connecting to ProtonMail...")
+			print(f"{Fore.RED}[-] Error when connecting to ProtonMail...")
 			exit()
 
 
@@ -135,33 +133,30 @@ class NeutrOSINT():
 			element = WebDriverWait(self.driver, self.time).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div[4]/div/div/div/div/div/div[2]/div/div/div/div/div/div/input')))
 			to_email_element = self.driver.find_element(By.XPATH, '/html/body/div[1]/div[4]/div/div/div/div/div/div[2]/div/div/div/div/div/div/input')
 
-			#Convert list to string + add "," at the end (for the last occurence to be updated)
-			emails_to_check_str = ','.join(self.emails)
-			emails_to_check_str += ','
-
+			emails_to_check_str = ','.join(self.emails) + ','
 			#Write all emails in the "To" field and wait until protonmail detects if they exist or not
 			to_email_element.send_keys(emails_to_check_str)
 
 			time.sleep(self.time)
 			print(Fore.GREEN + "[+] Ready to check emails\n")
 		except:
-			print(Fore.RED + "[-] Unable to access new email to check email addresses")
+			print(f"{Fore.RED}[-] Unable to access new email to check email addresses")
 			exit()
 
 
 	def extract_timestamp(self, email):
 
 		#We use requests here because selenium doesn't work???
-		source_code = requests.get('https://api.protonmail.ch/pks/lookup?op=index&search=' + email)
+		source_code = requests.get(
+			f'https://api.protonmail.ch/pks/lookup?op=index&search={email}'
+		)
+
 
 		try:
-			timestamp = re.sub(':', '', re.search(':[0-9]{10}::', source_code.text).group(0))
-			creation_date = datetime.fromtimestamp(int(timestamp))
-
-			return creation_date
-
+			timestamp = re.sub(':', '', re.search(':[0-9]{10}::', source_code.text)[0])
+			return datetime.fromtimestamp(int(timestamp))
 		except AttributeError:
-			print(Fore.RED + "[-] Error! Impossible to retrieve the creation date")
+			print(f"{Fore.RED}[-] Error! Impossible to retrieve the creation date")
 		
 
 	def check_emails(self):
@@ -180,19 +175,26 @@ class NeutrOSINT():
 			for item in elements_to_loop:
 				#foreach retrieve their classes
 				class_str = item.get_attribute('class')
-				if("invalid" in class_str):
-					if(self.output_file != None):
-						self.write_to_file("Invalid email: " + self.emails[count] + "\n")
-					print(Fore.RED + "[-] Invalid email: " + self.emails[count] + Style.RESET_ALL)
+				if ("invalid" in class_str):
+					if (self.output_file != None):
+						self.write_to_file(f"Invalid email: {self.emails[count]}" + "\n")
+					print(f"{Fore.RED}[-] Invalid email: {self.emails[count]}{Style.RESET_ALL}")
 				else:
 					creation_date = self.extract_timestamp(self.emails[count])
-					if(self.output_file != None):
-						self.write_to_file("Valid email: " + self.emails[count] + " - Creation date: " + str(creation_date) + Style.RESET_ALL + "\n")
-					print(Fore.GREEN + "[+] Valid email: " + self.emails[count] + " - Creation date: " + str(creation_date))
+					if (self.output_file != None):
+						self.write_to_file(
+							f"Valid email: {self.emails[count]} - Creation date: {str(creation_date)}{Style.RESET_ALL}"
+							+ "\n"
+						)
+
+					print(
+						f"{Fore.GREEN}[+] Valid email: {self.emails[count]} - Creation date: {str(creation_date)}"
+					)
+
 
 				count = count + 1
 		except UnexpectedAlertPresentException:
-			print(Fore.RED + "[-] Unable to check emails addreses...")
+			print(f"{Fore.RED}[-] Unable to check emails addreses...")
 			exit()
 
 	def close(self):
